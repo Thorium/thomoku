@@ -1,0 +1,26 @@
+##### MACROS #####
+
+CC = gcc
+CFLAGS = -ansi -DSHM -I/usr/X11R6/include
+LIBS = -L/usr/X11R6/lib -lMesaGL -lMesaGLU -lglut -lm -lX11 -lXext -lXi -lXmu
+
+PROGS =
+
+##### RULES #####
+
+.SUFFIXES:
+.SUFFIXES: .c
+
+.c:
+	$(CC) $(CFLAGS) $(LIBS) -o $@ $<
+
+##### TARGETS ######
+
+
+default:
+	@echo "Use:   make ristinolla"
+
+clean:
+	-rm -f *.o core
+
+
