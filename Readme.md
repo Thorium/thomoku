@@ -7,15 +7,15 @@ This is very old stuff!
 
 ![pelityyli.jpg][3]
 
-## TEKOÄLY RISTINOLLASSA ##
+## TEKOÄLY RISTINOLLASSA
 
-### 1. Tiivistys ###                           
+### 1. Tiivistys                
 
 Tämä asiakirja sisältää erittäin lyhyesti selitettynä pääpiirteissään ristinollan säännöt, pelissä käytettävät algoritmit ja algoritmien sovelluksen tietokoneelle.
 
  
 
-### 2. Ristinollan säännöt ###           
+### 2. Ristinollan säännöt 
 
 Ristinollan säännöt vaihtelevat hieman, mutta perussääntönä voidaan pitää, että pelaajat laittavat pelilaudalle ruudukkoon oman pelimerkkinsä vuorotellen ja se joka saa n kpl omia pelimerkkejään peräkkäin suoraan voittaa. Välissä ei saa olla vastustajan pelimerkkejä. Suora voidaan muodostaa joko pystysuunnassa, vaakasuunnassa tai viistoon (sekä vasemmalle, että oikealle). Jos lauta on 3x3 mallinen niin nolla ei voi voittaa. Todistus www-sivulla:
 
@@ -23,11 +23,11 @@ http://tuli.cc.lut.fi/~hietanen/lunchbox/tictac/1.htm
 
 Näin ollen laudan pitää olla suurempi. Yleensä pelilautana käytetään ruutupaperia, joten pelilauta on suuri. Suurella laudalla pelaajan pitää saada 5 pelimerkkiä peräkkäin. Tämä johtuu siitä, että jos pelimerkkejä pitäisi saada alle 5, ei nolla voi voittaa. Ja taas jos pelimerkkejä pitäisi saada 6, ei peli päättyisi välttämättä koskaan. Koska ristillä on aina yksi pelimerkki enemmän kuin nollalla, on risti varsin suuressa etulyöntiasemassa.
 
-### 3. Ristinollan kansainvälisyys ###
+### 3. Ristinollan kansainvälisyys
 
 Ristinolla on englanniksi tic-tac-toe, mutta se tarkoittaa vain 3x3-laudalla pelattavaa versiota. Isommalla laudalla tunnetaan toki samanlainen peli, nimellä Go-moku. Go-mokun alkuperä on aasiasta. Laudan koko on siinä kiinteä 15x15 ja pelimerkkeinä pelaajilla on mustat kivet ja valkoiset kivet, jotka sijoitetaan laudan viivojen leikkauspisteisiin. Muuten peli on sama kuin ristinolla, kuitenkin sillä erotuksella, että yli 5 pelimerkkiä peräkkäin ei voita. (Normaalisti ristinollassa katsotaan usein 6 suoran sisältävän 5 suoran.) Koska go-mokukin suosii aloittavaa puolta, eli mustaa kiveä, on luotu lisäksi erilaisia sääntöjä. Esimerkiksi Renju on muuten samanlainen peli, mutta aloittajan saadessa 2 kpl kummastakin päästä torjumattomia 3 suoria tai 2 kpl toisesta päästä torjuttuja 4 suoria hän häviää. Peli on silloin vaikeampi kuin ristinolla, mutta aloittajalla on yhä suuri etu puolellaan. 
 
-### 4. Algoritmi ###                         
+### 4. Algoritmi    
 
 Jos pelaajalla on neljän suora jonka jommassakummassa päässä on tyhjä ruutu, eikä vastustaja torju sitä, hän saa seuraavalla vuorolla 5 suoran ja voittaa pelin. Näin ollen 4 suora on pakko torjua, eli se on uhka, josta voittaa 1 siirron päästä. Vastaavasti jos pelaajalla on kummastakin päästä torjumaton 3 suora, eikä vastustaja torju sitä kummastakaan päästä, saa pelaaja seuraavalla siirrolla torjumattoman 4 suoran, jota vastustajan on mahdoton enää estää muodostumasta 5 suoraksi. Näin ollen 3 suora on pakko torjua toisesta päästä. 3 suora on uhka,  josta vastustaja voittaa 2 siirron päästä. Näin ollen pelaaja voi halutessaan pelata ensin oman 4 suoransa (voitto 1 siirron päässä) ennen kuin torjuu vastustajan 3 suoran (vastustajan voitto 2 siirron päässä).
 
@@ -48,13 +48,13 @@ Näistä on tärkeää huomata, että kaksi kappaletta torjumattomia 3 suoria ei
 
 Jos saadaan pakotettua vastustaja torjumaan uhka kunnes saadaan paikka josta saadaan kaksi uhkaa, on pelin voitto selvä.
 
-### 5. Pelin muunto tietokoneelle ###
+### 5. Pelin muunto tietokoneelle 
 
 Pelilauta on jokin kaksiulotteinen taulukko. Pelilaudalla voi olla kolmea eri tyyppiä merkkejä: risti, nolla tai tyhjä. Tietyn rivin hakeminen laudalta (esim. etsitään onko laudalla oxxxx_ ) tapahtuu yksinkertaisena tekstihakuna. Tekstihaku pitää tietysti suorittaa joka ilmansuuntaan, eli 8 kertaa. Näin ollen hakuun tulee 8*(laudankoko_x)*(laudankoko_y) kertaa suoritettava hakuoperaatio, joka sisältää haettavan rivin pituuden verran vertailuja. Tämä joudutaan tekemään jokaista erilaista haettavaa riviä kohden. 
 
 Tekemäni ristinolla käyttää lähinnä Knuthin, Morrisin ja Prattin tapaista tekstihakua. Monimutkaisemmat tekstihaut (esim. Bayerin, Mooren ja Horspoolin algoritmi) perustuvat siihen, että tekstissä on satoja erityylisiä merkkejä. (Tekstihauista erittäin hyvät selostukset Martti Penttosen kirjassa Johdatus Algoritmien Suunnitteluun ja Analysointiin.) Valitettavasti ristinollalaudalla ei ole kuin kolmea tyyppiä merkkejä. Lisäksi samankaltaisia rivejä on kymmeniä (eli myöskään Ahon ja Chorasickin algoritmi ei sovellu).
 
-### 6. Algoritmin muunto tietokoneelle ###
+### 6. Algoritmin muunto tietokoneelle 
 
 Kaikki pelin siirrot voidaan ajatella muodostavan yhdessä pelistä suuren puurakenteen. Jokainen erilainen seuraava siirto johtaa puun solmun eri lapsisolmuun. Puusta tapahtuvat haut tehdään rekursiivisesti.
 
@@ -144,7 +144,7 @@ Maalien löytyminen tarkoittaa, että pelaaja saa jostain kaksi kolmen suoraa, k
 
 
 
-### 7. Heurastiset haut ###              
+### 7. Heurastiset haut 
 
 Koska haku on erittäin raskas, ei pelaaja jaksa odottaa yli n kpl siirron laskentasyvyyttä enempää (nykytietokoneilla n on noin 3-5). Se takaa kuitenkin jo ihan hyvän tuloksen, koska näissä siirroissa on vastustajan siirrot mukana, eli oikeasti siirtomäärä on n*2 ja parhaat ihmispelaajatkin pystyvät laskemaan keskimäärin vain 5 siirtoa eteenpäin.
 
@@ -246,7 +246,7 @@ Alla on esimerkki prioriteeteista (THO-MOKU 0.995 Agressive Attacker), mutta tä
 		0_0_0_0   14000/2
 ```
  
-### 8. THO-MOKU ###
+### 8. THO-MOKU 
 
 Nämä edellä lyhyesti selostetut tekoälyn kannalta mielenkiintoiset algoritmit ovat käytössä THO-MOKU Ristinollaaja v0.995B ohjelmassa. Niillä muodostetaan pääpiirteittäin ristinollan tietokoneen tekoäly, jonka toteutus, c-kielinen muutaman tuhannen rivin koodi (ei sis. käyttöliittymää) on saatavilla THO-MOKU:n kotisivulta. Koodi lukee tiedostosta pelilaudan taulukon (0 = tyhjä, 1 = risti, 2 = nolla) ja ottaa syötteeksi tietokonepelaajan parametrit (puoli, tyyli, yms), laskee parhaan paikan ja palauttaa sen pelilaudan muotoisena prioriteettimatriisina käyttöliittymälle. Jos löytyy voittava paikka, on muiden paikkojen prioriteetti 0. Käyttöliittymän tehtävä on piirtää pelilautaruudukko (40x40) ja antaa pelaajien laittaa pelimerkkinsä ruudukkoon.
 
@@ -260,16 +260,16 @@ http://www.lut.fi/~hietanen/thomoku/
 
 - Tuomas Hietanen, (c) 1998 - ...
 
-![screensht1.jpg][4]
-![screensht2.jpg][5]
-![screensht3.jpg][6]
+![screensht1.gif][4]
+![screensht2.gif][5]
+![screensht3.gif][6]
  
 
    [1]: https://raw.github.com/Thorium/Thomoku/master/thomoku.jpg
    [2]: https://raw.github.com/Thorium/Thomoku/master/pelitapa.jpg
    [3]: https://raw.github.com/Thorium/Thomoku/master/pelityyli.jpg
-   [4]: https://raw.github.com/Thorium/Thomoku/master/screensht1.jpg
-   [5]: https://raw.github.com/Thorium/Thomoku/master/screensht2.jpg
-   [6]: https://raw.github.com/Thorium/Thomoku/master/screensht3.jpg
+   [4]: https://raw.github.com/Thorium/Thomoku/master/screensht1.gif
+   [5]: https://raw.github.com/Thorium/Thomoku/master/screensht2.gif
+   [6]: https://raw.github.com/Thorium/Thomoku/master/screensht3.gif
 
  
