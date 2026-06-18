@@ -1,0 +1,138 @@
+/* THO-MOKU — styling echoing the original Silverlight teal/board look. */
+:root {
+  /* Cell size scales with viewport so the whole 40x40 board fits the screen width.
+     Capped at 16px on desktop; on a 360px phone it becomes ~8px (pinch-zoom to tap precisely).
+     Plain fallback first for very old browsers lacking min()/calc. */
+  --cell: 16px;
+  --cell: min(16px, calc((100vw - 16px) / 40));
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", Tahoma, sans-serif;
+  color: #fff;
+  background: linear-gradient(to bottom, #2c4b5b 0%, #708d9c 48%, #5c8396 59%, #2c4b5b 69%, #4b9294 100%);
+  min-height: 100vh;
+}
+
+.thomoku-root {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 8px;
+}
+
+.topbar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.title {
+  font-size: 20px;
+  color: wheat;
+  letter-spacing: 2px;
+}
+
+.restart {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: 15px;
+  padding: 6px 4px;          /* larger tap target */
+}
+
+.modes {
+  display: flex;
+  flex-wrap: wrap;           /* stack/wrap on narrow screens */
+  gap: 10px 16px;
+  margin: 8px 0;
+  font-size: 14px;
+}
+.modes label {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;            /* easier to tap */
+}
+
+.comment {
+  min-height: 22px;
+  margin: 6px 0;
+  font-size: 15px;
+  color: #fff;
+}
+
+/* Small "thinking" indicator in the top bar (never over the board). */
+.thinking {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: wheat;
+}
+.spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: wheat;
+  border-radius: 50%;
+  display: inline-block;
+  animation: thomoku-spin 0.7s linear infinite;
+}
+@keyframes thomoku-spin { to { transform: rotate(360deg); } }
+
+/* Wrapper holds the board grid and the (absolutely-positioned) winning-line overlay. */
+.board-wrap {
+  position: relative;
+  width: calc(40 * var(--cell));
+  margin: 0 auto;
+}
+
+/* 40x40 board — sized in viewport-relative cells so it fits the screen. */
+.board {
+  display: grid;
+  grid-template-columns: repeat(40, var(--cell));
+  grid-template-rows: repeat(40, var(--cell));
+  width: calc(40 * var(--cell));
+  background: #fff;
+  border: 1px solid #2c4b5b;
+  touch-action: manipulation;  /* no 300ms tap delay; still allows pinch-zoom */
+}
+
+/* Winning-line overlay: covers the board, ignores pointer events. */
+.winline {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.cell {
+  width: var(--cell);
+  height: var(--cell);
+  border: 1px solid #d7e2e6;
+  background-size: 80% 80%;
+  background-repeat: no-repeat;
+  background-position: center;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+@media (hover: hover) {
+  .cell:hover { background-color: #eef6f8; }   /* hover only on devices that have it */
+}
+
+.cell.x { background-image: url(./x.jpg); cursor: default; }
+.cell.o { background-image: url(./o.jpg); cursor: default; }
+
+/* Active / last-move marker */
+.cell.last { outline: 2px solid #1d3a44; outline-offset: -2px; }

@@ -1,0 +1,18 @@
+{
+  "name": "thomoku",
+  "version": "1.0.0",
+  "description": "THO-MOKU gomoku — F# Fable UI over the ported C# engine",
+  "type": "module",
+  "scripts": {
+    "start": "dotnet fable watch src/Thomoku.App --run vite",
+    "build": "dotnet fable src/Thomoku.App --run vite build",
+    "clean": "dotnet fable clean src/Thomoku.App --yes"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}
