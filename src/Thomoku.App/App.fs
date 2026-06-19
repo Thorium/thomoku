@@ -51,10 +51,18 @@ let konevuoro (g: Game) =
     let c = g.c
     c.vuoro <- if g.vuororasti then 1 else 2
     c.prionollaus()
-    if c.kokovuoro < 10 then c.alotus() |> ignore
+    // alotus() returns 1 when the pre-taught opening book chose this move (it boosts that
+    // cell's PRIORITY to 500 so haeparas picks it), or 0 when play has left the book and no
+    // book move applies. We don't use it for move selection (haeparas reads PRIORITY), but it
+    // tells us whether the book is driving this turn. On a book-move turn mietipaikka() still
+    // runs and sets CmpComString from its own analysis, which doesn't describe the book move —
+    // hence bogus remarks like "Now you had the straight four" with no four on the board. So
+    // suppress the comment only while the book is actually driving; the moment the opening
+    // derails alotus() returns 0 and real commentary resumes automatically.
+    let bookMove = if c.kokovuoro < 10 then c.alotus() else 0
     c.CmpComString <- " "
     c.mietipaikka() |> ignore
-    g.comment <- c.CmpComString
+    g.comment <- if bookMove = 1 then "" else c.CmpComString
     let p = c.haeparas()
     if p.Y >= 0 && p.Y < boardSize && p.X >= 0 && p.X < boardSize && c.A.[p.Y].[p.X] = 0 then
         c.A.[p.Y].[p.X] <- c.vuoro
