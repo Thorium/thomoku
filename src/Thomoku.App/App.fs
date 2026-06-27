@@ -16,23 +16,48 @@ type Mode =
     | PlayerVsPlayer
     | PlayerVsComputer   // computer = O
 
+/// The two players. X always moves first. The engine stores moves as ints
+/// (1 = X, 2 = O); these helpers convert at that boundary so the UI never
+/// juggles magic numbers.
+[<Struct>]
+type Player =
+    | X
+    | O
+
+module Player =
+    let toInt = function X -> 1 | O -> 2
+    let ofInt = function 2 -> O | _ -> X     // engine: 1 = X, 2 = O
+    let other = function X -> O | O -> X
+
+/// A board cell as the UI sees it (the engine's board is a 0/1/2 int grid).
+[<Struct>]
+type Cell =
+    | EmptyCell
+    | Taken of Player
+
+module Cell =
+    let ofInt = function 1 -> Taken X | 2 -> Taken O | _ -> EmptyCell
+
+/// The winning five-in-a-row, as board-cell endpoints (the engine reports
+/// these as suora1x/suora1y → suora2x/suora2y).
+type WinLine = { X1: int; Y1: int; X2: int; Y2: int }
+
 /// All mutable game state. The engine (Computer) is itself stateful, so we keep one instance
 /// and mirror just enough for rendering. A React tick forces re-render after each mutation.
 type Game =
     { mutable c: Computer
-      mutable vuororasti: bool          // true => X (1) to move, false => O (2)
+      mutable toMove: Player            // whose turn it is (X moves first)
       mutable mode: Mode
-      mutable winner: int               // 0 none, 1 X, 2 O
+      mutable winner: Player option     // None until someone wins
       mutable last: (int * int) option  // last placed (col,row) for the active marker
       mutable comment: string
       mutable thinking: bool             // computer is computing its move
-      mutable winLine: (int * int * int * int) option }  // (x1,y1,x2,y2) of the winning row
+      mutable winLine: WinLine option }  // the winning row, once there is one
 
 let newGame (mode: Mode) =
     let c = Computer()
+    // A fresh Computer already has kokovuoro = arpamaara = 0; pin the board to boardSize.
     c.A <- Array.init boardSize (fun _ -> Array.zeroCreate<int> boardSize)
-    c.kokovuoro <- 0
-    c.arpamaara <- 0
     match mode with
     | ComputerVsPlayer ->
         // Computer is X and opens at a random-ish centre (the original's auto first move).
@@ -41,15 +66,15 @@ let newGame (mode: Mode) =
         c.A.[cx].[cy] <- 1
         c.vuoro <- 2
         c.kokovuoro <- 1
-        { c = c; vuororasti = false; mode = mode; winner = 0; last = Some(cx, cy); comment = ""; thinking = false; winLine = None }
+        { c = c; toMove = O; mode = mode; winner = None; last = Some(cx, cy); comment = ""; thinking = false; winLine = None }
     | PlayerVsPlayer | PlayerVsComputer ->
         // X moves first on an empty board (the human in PvC; the first player in PvP).
-        { c = c; vuororasti = true; mode = mode; winner = 0; last = None; comment = ""; thinking = false; winLine = None }
+        { c = c; toMove = X; mode = mode; winner = None; last = None; comment = ""; thinking = false; winLine = None }
 
 /// The computer's turn — mirrors MainPage.Konevuoro.
 let konevuoro (g: Game) =
     let c = g.c
-    c.vuoro <- if g.vuororasti then 1 else 2
+    c.vuoro <- Player.toInt g.toMove
     c.prionollaus()
     // alotus() returns 1 when the pre-taught opening book chose this move (it boosts that
     // cell's PRIORITY to 500 so haeparas picks it), or 0 when play has left the book and no
@@ -69,16 +94,16 @@ let konevuoro (g: Game) =
         g.last <- Some(p.Y, p.X)
     let w = c.TarkistaVoitto()
     if w <> 0 then
-        g.winner <- w
-        g.winLine <- Some(c.suora1x, c.suora1y, c.suora2x, c.suora2y)
-    else g.vuororasti <- not g.vuororasti
+        g.winner <- Some(Player.ofInt w)
+        g.winLine <- Some { X1 = c.suora1x; Y1 = c.suora1y; X2 = c.suora2x; Y2 = c.suora2y }
+    else g.toMove <- Player.other g.toMove
     c.kokovuoro <- c.kokovuoro + 1
 
 /// Is it the computer's turn to move in the current mode?
 let private computersTurn (g: Game) =
     match g.mode with
-    | PlayerVsComputer -> not g.vuororasti      // computer = O
-    | ComputerVsPlayer -> g.vuororasti          // computer = X
+    | PlayerVsComputer -> g.toMove = O          // computer = O
+    | ComputerVsPlayer -> g.toMove = X          // computer = X
     | PlayerVsPlayer -> false
 
 /// Run the computer's move on a deferred tick so the browser can first paint the human's
@@ -97,25 +122,25 @@ let private scheduleCpu (g: Game) (rerender: unit -> unit) =
 /// repaint the human move immediately and then compute the reply asynchronously.
 let playerClick (g: Game) (col: int) (row: int) (rerender: unit -> unit) =
     let c = g.c
-    if g.winner = 0 && not g.thinking && c.A.[col].[row] = 0 then
+    if g.winner = None && not g.thinking && c.A.[col].[row] = 0 then
         // Only allow a human move when it is actually the human's turn.
         let humanTurn =
             match g.mode with
             | PlayerVsPlayer -> true
-            | PlayerVsComputer -> g.vuororasti          // human = X
-            | ComputerVsPlayer -> not g.vuororasti      // human = O
+            | PlayerVsComputer -> g.toMove = X          // human = X
+            | ComputerVsPlayer -> g.toMove = O          // human = O
         if humanTurn then
-            c.vuoro <- if g.vuororasti then 1 else 2
+            c.vuoro <- Player.toInt g.toMove
             c.A.[col].[row] <- c.vuoro
             g.last <- Some(col, row)
             c.kokovuoro <- c.kokovuoro + 1
             let w = c.TarkistaVoitto()
             if w <> 0 then
-                g.winner <- w
-                g.winLine <- Some(c.suora1x, c.suora1y, c.suora2x, c.suora2y)
+                g.winner <- Some(Player.ofInt w)
+                g.winLine <- Some { X1 = c.suora1x; Y1 = c.suora1y; X2 = c.suora2x; Y2 = c.suora2y }
                 rerender ()
             else
-                g.vuororasti <- not g.vuororasti
+                g.toMove <- Player.other g.toMove
                 if computersTurn g then scheduleCpu g rerender   // paints move + spinner, then computes
                 else rerender ()
 
@@ -134,11 +159,11 @@ let App () =
 
     let statusText =
         match g.winner with
-        | 1 -> "X WON!"
-        | 2 -> "O WON!"
-        | _ -> if g.thinking then "Computer is thinking…"
-               elif g.comment.Trim() = "" then ""
-               else g.comment
+        | Some X -> "X WON!"
+        | Some O -> "O WON!"
+        | None -> if g.thinking then "Computer is thinking…"
+                  elif g.comment.Trim() = "" then ""
+                  else g.comment
 
     Html.div [
         prop.className "thomoku-root"
@@ -195,14 +220,17 @@ let App () =
                         prop.children [
                             for row in 0 .. boardSize - 1 do
                                 for col in 0 .. boardSize - 1 do
-                                    let v = c.A.[col].[row]
                                     let isLast = g.last = Some(col, row)
                                     Html.div [
                                         prop.key (sprintf "%d_%d" col row)
-                                        prop.className (
+                                        prop.classes [
                                             "cell"
-                                            + (if v = 1 then " x" elif v = 2 then " o" else "")
-                                            + (if isLast then " last" else ""))
+                                            match Cell.ofInt c.A.[col].[row] with
+                                            | Taken X -> "x"
+                                            | Taken O -> "o"
+                                            | EmptyCell -> ""
+                                            if isLast then "last"
+                                        ]
                                         prop.onClick (fun _ -> playerClick g col row rerender)
                                     ]
                         ]
@@ -210,14 +238,14 @@ let App () =
                     // Red line over the 5 winning marks. viewBox is in cell units so it scales
                     // with the board on any screen size.
                     match g.winLine with
-                    | Some (x1, y1, x2, y2) ->
+                    | Some line ->
                         Svg.svg [
                             svg.className "winline"
                             svg.viewBox (0, 0, boardSize, boardSize)
                             svg.children [
                                 Svg.line [
-                                    svg.x1 (float x1 + 0.5); svg.y1 (float y1 + 0.5)
-                                    svg.x2 (float x2 + 0.5); svg.y2 (float y2 + 0.5)
+                                    svg.x1 (float line.X1 + 0.5); svg.y1 (float line.Y1 + 0.5)
+                                    svg.x2 (float line.X2 + 0.5); svg.y2 (float line.Y2 + 0.5)
                                     svg.stroke "#d11"
                                     svg.strokeWidth 0.15
                                     svg.strokeLineCap "round"
