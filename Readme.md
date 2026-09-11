@@ -1,4 +1,6 @@
 
+**▶ [Play online](https://thorium.github.io/thomoku/)** — the F# / Fable web port of THO-MOKU (installable on mobile; see [README.fable.md](README.fable.md)).
+
 ![thomoku.jpg][1]
 
 This is very old stuff!

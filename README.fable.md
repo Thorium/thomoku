@@ -4,6 +4,10 @@ A browser version of the classic **THO-MOKU** gomoku/five-in-a-row game, deploye
 Pages. The strong computer AI is the original Silverlight C# engine, ported faithfully to F# and
 compiled to JavaScript with [Fable](https://fable.io/).
 
+**▶ [Play online](https://thorium.github.io/thomoku/)** (browser version, no install needed)
+
+**📱 Install as an app:** open the same link on your phone or tablet and tap **Install app** in the banner (Android / Chrome), or **Share → Add to Home Screen** (iPhone / iPad). The game then launches full-screen from your home screen and works offline.
+
 > The historical DOS/OpenGL/Silverlight versions and the AI write-up live in the repository root
 > (`Readme.md`, `THOMOKU/`, `thomokugl/`). This document covers the web port.
 
