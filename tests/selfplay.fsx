@@ -20,10 +20,12 @@ open Thomoku
 /// Returns (stones placed incl. the seed mark, winner 0/1/2/-1, move signature string).
 let playGame (seed: int) =
     Computer.random <- Random(seed)        // seed BEFORE constructing (ctor consumes the RNG)
-    let c = Computer()
-    c.A <- Array.init 40 (fun _ -> Array.zeroCreate<int> 40)
-    c.kokovuoro <- 0
-    c.arpamaara <- 1
+    let c =
+        Computer(
+            A = (Array.init 40 (fun _ -> Array.zeroCreate<int> 40)),
+            kokovuoro = 0,
+            arpamaara = 1
+        )
 
     let sb = StringBuilder()
 
@@ -34,7 +36,7 @@ let playGame (seed: int) =
     c.vuoro <- 2
     c.kokovuoro <- c.kokovuoro + 1
     let mutable placed = 1
-    sb.Append(sprintf "X%d,%d;" cx cy) |> ignore
+    sb.Append($"X%d{cx},%d{cy};") |> ignore
 
     let mutable vuororasti = false      // false => O (2) to move next, true => X (1)
     let mutable winner = 0
@@ -93,9 +95,9 @@ for seed in 1 .. games do
     total <- total + moves
     mn <- min mn moves
     mx <- max mx moves
-    if winner <= 0 then failures <- (sprintf "seed %d: no winner (winner=%d, %d moves)" seed winner moves) :: failures
-    if moves < 15 then failures <- (sprintf "seed %d: game too short (%d moves) — instant end / wiring bug" seed moves) :: failures
-    if moves >= 1600 then failures <- (sprintf "seed %d: board full (%d) — win never detected" seed moves) :: failures
+    if winner <= 0 then failures <- $"seed %d{seed}: no winner (winner=%d{winner}, %d{moves} moves)" :: failures
+    if moves < 15 then failures <- $"seed %d{seed}: game too short (%d{moves} moves) — instant end / wiring bug" :: failures
+    if moves >= 1600 then failures <- $"seed %d{seed}: board full (%d{moves}) — win never detected" :: failures
     match Map.tryFind seed golden with
     | Some g when g <> sgn -> mismatches <- mismatches + 1; printfn "MISMATCH vs oracle at seed=%d" seed
     | _ -> ()
@@ -103,7 +105,7 @@ for seed in 1 .. games do
 let avg = float total / float games
 printfn "Self-play: %d games, avg=%.1f moves, min=%d, max=%d" games avg mn mx
 if not (Map.isEmpty golden) then
-    printfn "Equivalence vs C# oracle: %s" (if mismatches = 0 then "ALL MATCH ✓" else sprintf "%d MISMATCH(es) ✗" mismatches)
+    printfn "Equivalence vs C# oracle: %s" (if mismatches = 0 then "ALL MATCH ✓" else $"%d{mismatches} MISMATCH(es) ✗")
 else
     printfn "WARN: golden_signatures.txt not found — skipping equivalence check"
 

@@ -9,12 +9,15 @@ open Thomoku
 // Replicates the original Silverlight MainPage game flow.
 // ---------------------------------------------------------------------------
 
+[<Literal>]
 let boardSize = 40
 
 type Mode =
-    | ComputerVsPlayer   // computer = X (moves first)
+    /// computer = X (moves first)
+    | ComputerVsPlayer
     | PlayerVsPlayer
-    | PlayerVsComputer   // computer = O
+    /// computer = O
+    | PlayerVsComputer
 
 /// The two players. X always moves first. The engine stores moves as ints
 /// (1 = X, 2 = O); these helpers convert at that boundary so the UI never
@@ -26,7 +29,8 @@ type Player =
 
 module Player =
     let toInt = function X -> 1 | O -> 2
-    let ofInt = function 2 -> O | _ -> X     // engine: 1 = X, 2 = O
+    /// engine: 1 = X, 2 = O
+    let ofInt = function 2 -> O | _ -> X
     let other = function X -> O | O -> X
 
 /// A board cell as the UI sees it (the engine's board is a 0/1/2 int grid).
@@ -40,6 +44,7 @@ module Cell =
 
 /// The winning five-in-a-row, as board-cell endpoints (the engine reports
 /// these as suora1x/suora1y → suora2x/suora2y).
+[<Struct>]
 type WinLine = { X1: int; Y1: int; X2: int; Y2: int }
 
 /// All mutable game state. The engine (Computer) is itself stateful, so we keep one instance
@@ -122,7 +127,7 @@ let private scheduleCpu (g: Game) (rerender: unit -> unit) =
 /// repaint the human move immediately and then compute the reply asynchronously.
 let playerClick (g: Game) (col: int) (row: int) (rerender: unit -> unit) =
     let c = g.c
-    if g.winner = None && not g.thinking && c.A.[col].[row] = 0 then
+    if g.winner.IsNone && not g.thinking && c.A.[col].[row] = 0 then
         // Only allow a human move when it is actually the human's turn.
         let humanTurn =
             match g.mode with
@@ -222,7 +227,7 @@ let App () =
                                 for col in 0 .. boardSize - 1 do
                                     let isLast = g.last = Some(col, row)
                                     Html.div [
-                                        prop.key (sprintf "%d_%d" col row)
+                                        prop.key $"%d{col}_%d{row}"
                                         prop.classes [
                                             "cell"
                                             match Cell.ofInt c.A.[col].[row] with

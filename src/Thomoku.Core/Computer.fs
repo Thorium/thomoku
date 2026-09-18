@@ -7,6 +7,7 @@
 #nowarn "0049"
 
 namespace Thomoku
+open System
 
 // Early-return helpers (the C# uses `return` mid-loop; each method catches its OWN raise).
 // Used only by the once-per-move methods; the hot recursive search is exception-free.
@@ -22,7 +23,7 @@ type Pelipaikka() =
 type Computer() =
 
     /// Shared RNG (settable so tests can seed deterministically, matching the C# static field).
-    static member val random : System.Random = System.Random() with get, set
+    static member val random : Random = Random() with get, set
 
     // Fields (C# defaults preserved). Exposed as properties so methods can use `this.x`.
     member val laudankoko = 40 with get, set
@@ -43,25 +44,25 @@ type Computer() =
     // first discarded). member val initializers run in declaration order, so this preserves the
     // exact RNG draw sequence. alotyyli MUST be declared before alotyyli2.
     member val alotyyli =
-        let a = System.Convert.ToInt32(Computer.random.NextDouble() * 3.0)
+        let a = Convert.ToInt32(Computer.random.NextDouble() * 3.0)
         if a = 0 then 4 else a
         with get, set
     member val alotyyli2 =
-        System.Convert.ToInt32(Computer.random.NextDouble() * 3.0) |> ignore
-        System.Convert.ToInt32(Computer.random.NextDouble() * 3.0) + 1
+        Convert.ToInt32(Computer.random.NextDouble() * 3.0) |> ignore
+        Convert.ToInt32(Computer.random.NextDouble() * 3.0) + 1
         with get, set
 
     // NOTE: the C# `arpa` discards one NextDouble() before returning — that wasted draw
     // MUST be kept so the RNG sequence matches the reference exactly.
     member this.arpa() =
-        System.Convert.ToInt32(Computer.random.NextDouble() * 3.0) |> ignore
-        System.Convert.ToInt32(Computer.random.NextDouble() * 3.0) + 1
+        Convert.ToInt32(Computer.random.NextDouble() * 3.0) |> ignore
+        Convert.ToInt32(Computer.random.NextDouble() * 3.0) + 1
 
     member this.arpa4() =
-        System.Convert.ToInt32(Computer.random.NextDouble() * 3.0) + 1
+        Convert.ToInt32(Computer.random.NextDouble() * 3.0) + 1
 
     member this.arpa5() =
-        System.Convert.ToInt32(Computer.random.NextDouble() * 3.0)
+        Convert.ToInt32(Computer.random.NextDouble() * 3.0)
 
     member this.prionollaus() =
         for i in 0 .. 63 do
@@ -1100,8 +1101,10 @@ type Computer() =
                         raise (ReturnInt num3)
             for num5 in 8 .. num2 + 8 - 1 do
                 for num6 in 8 .. num2 + 8 - 1 do
-                    let mutable num7 = 0
-                    while array.[num6].[num5 + num7] = num3 do num7 <- num7 + 1
+                    let rec advanceNum7 num7 =
+                        if array.[num6].[num5 + num7] = num3 then advanceNum7 (num7 + 1) else num7
+
+                    let num7 = advanceNum7 0
                     if num7 > 4 && (num = 1 || (num7 = 5 && array.[num6].[num5 - 1] <> num3)) then
                         this.suora1x <- num6 - 8
                         this.suora1y <- num5 - 8
@@ -1110,8 +1113,10 @@ type Computer() =
                         raise (ReturnInt num3)
             for num8 in 8 .. num2 + 8 - 1 do
                 for num9 in 8 .. num2 + 8 - 1 do
-                    let mutable num10 = 0
-                    while array.[num9 + num10].[num8 + num10] = num3 do num10 <- num10 + 1
+                    let rec advanceNum10 num10 =
+                        if array.[num9 + num10].[num8 + num10] = num3 then advanceNum10 (num10 + 1) else num10
+
+                    let num10 = advanceNum10 0
                     if num10 > 4 && (num = 1 || (num10 = 5 && array.[num9 - 1].[num8 - 1] <> num3)) then
                         this.suora1x <- num9 - 8
                         this.suora1y <- num8 - 8
@@ -1120,8 +1125,10 @@ type Computer() =
                         raise (ReturnInt num3)
             for num11 in 8 .. num2 + 8 - 1 do
                 for num12 in 8 .. num2 + 8 - 1 do
-                    let mutable num13 = 0
-                    while array.[num12 - num13].[num11 + num13] = num3 do num13 <- num13 + 1
+                    let rec advanceNum13 num13 =
+                        if array.[num12 - num13].[num11 + num13] = num3 then advanceNum13 (num13 + 1) else num13
+
+                    let num13 = advanceNum13 0
                     if num13 > 4 && (num = 1 || (num13 = 5 && array.[num12 + 1].[num11 - 1] <> num3)) then
                         this.suora1x <- num12 - 8
                         this.suora1y <- num11 - 8
@@ -2304,7 +2311,7 @@ type Computer() =
                 let num3 = this.arpa()
                 if this.arpamaara = 0 then num2 <- 0
                 if this.arpamaara = 1 then num2 <- 7 + num3
-                if this.arpamaara = 2 then num2 <- System.Convert.ToInt32(0.1 * float num)
+                if this.arpamaara = 2 then num2 <- Convert.ToInt32(0.1 * float num)
                 if this.PRIORITY.[j].[i] < -1 then this.PRIORITY.[j].[i] <- 65536 + this.PRIORITY.[j].[i]
                 if this.PRIORITY.[j].[i] + num3 + num2 > num && j >= 8 && i >= 8 && this.A.[j - 8].[i - 8] = 0 then
                     num <- this.PRIORITY.[j].[i] + num3
@@ -2347,7 +2354,7 @@ type Computer() =
             for k in 0 .. this.laudankoko - 1 do
                 for l in 0 .. this.laudankoko - 1 do
                     array.[l + 8].[k + 8] <- this.A.[l].[k]
-            this.fastend(pISTEET)
+            this.fastend pISTEET
             if num2 = 1 then this.taulukko1(aA, 2, 1)
             if num2 = 2 then this.taulukko1(aA, 1, 2)
             for m in 0 .. 5 do
@@ -2475,10 +2482,10 @@ type Computer() =
                             for num40 in 8 .. this.laudankoko + 8 - 1 do
                                 if this.PRIORITY.[num40].[num39] > 1 then
                                     this.PRIORITY.[num40].[num39] <- this.PRIORITY.[num40].[num39] / 2
-            if num3 = 1 then this.attacker(pISTEET)
-            if num3 = 2 then this.defender(pISTEET)
-            if num3 = 3 then this.preasure(pISTEET)
-            if num3 = 4 then this.tbuilder(pISTEET)
+            if num3 = 1 then this.attacker pISTEET
+            if num3 = 2 then this.defender pISTEET
+            if num3 = 3 then this.preasure pISTEET
+            if num3 = 4 then this.tbuilder pISTEET
             if num2 = 1 then this.taulukko4(aA, 2, 1)
             if num2 = 2 then this.taulukko4(aA, 1, 2)
             for num41 in 0 .. 39 do

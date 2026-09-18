@@ -7,10 +7,12 @@ open Thomoku
 
 let playGame (seed: int) =
     Computer.random <- Random(seed)
-    let c = Computer()
-    c.A <- Array.init 40 (fun _ -> Array.zeroCreate<int> 40)
-    c.kokovuoro <- 0
-    c.arpamaara <- 1
+    let c =
+        Computer(
+            A = (Array.init 40 (fun _ -> Array.zeroCreate<int> 40)),
+            kokovuoro = 0,
+            arpamaara = 1
+        )
     let sb = StringBuilder()
     let cx = 17 + c.arpa()
     let cy = 17 + c.arpa4()
@@ -18,7 +20,7 @@ let playGame (seed: int) =
     c.vuoro <- 2
     c.kokovuoro <- c.kokovuoro + 1
     let mutable placed = 1
-    sb.Append(sprintf "X%d,%d;" cx cy) |> ignore
+    sb.Append($"X%d{cx},%d{cy};") |> ignore
     let mutable vuororasti = false
     let mutable winner = 0
     let mutable stuck = false
