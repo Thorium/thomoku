@@ -57,6 +57,7 @@ type Game =
       mutable last: (int * int) option  // last placed (col,row) for the active marker
       mutable comment: string
       mutable thinking: bool             // computer is computing its move
+      mutable pending: (int * int) option // the human's move awaiting the computer's reply (drawn as a spinner)
       mutable winLine: WinLine option }  // the winning row, once there is one
 
 let newGame (mode: Mode) =
@@ -71,10 +72,10 @@ let newGame (mode: Mode) =
         c.A.[cx].[cy] <- 1
         c.vuoro <- 2
         c.kokovuoro <- 1
-        { c = c; toMove = O; mode = mode; winner = None; last = Some(cx, cy); comment = ""; thinking = false; winLine = None }
+        { c = c; toMove = O; mode = mode; winner = None; last = Some(cx, cy); comment = ""; thinking = false; pending = None; winLine = None }
     | PlayerVsPlayer | PlayerVsComputer ->
         // X moves first on an empty board (the human in PvC; the first player in PvP).
-        { c = c; toMove = X; mode = mode; winner = None; last = None; comment = ""; thinking = false; winLine = None }
+        { c = c; toMove = X; mode = mode; winner = None; last = None; comment = ""; thinking = false; pending = None; winLine = None }
 
 /// The computer's turn — mirrors MainPage.Konevuoro.
 let konevuoro (g: Game) =
@@ -112,16 +113,26 @@ let private computersTurn (g: Game) =
     | PlayerVsPlayer -> false
 
 /// Run the computer's move on a deferred tick so the browser can first paint the human's
-/// move + the "thinking" indicator (the search is heavy and blocks the main thread).
-let private scheduleCpu (g: Game) (rerender: unit -> unit) =
+/// move as a spinning mark + the "thinking" indicator (the search is heavy and blocks the
+/// main thread). requestAnimationFrame runs just before the next paint, so a timeout queued
+/// from it fires only after that frame is on screen; a bare short timeout doesn't guarantee
+/// the click was ever painted on slow devices. rAF is paused in hidden tabs / some webviews,
+/// so a fallback timeout also triggers the move; whichever fires first runs it, once.
+let private scheduleCpu (g: Game) (humanMove: int * int) (rerender: unit -> unit) =
     g.thinking <- true
+    g.pending <- Some humanMove
     rerender ()
-    Fable.Core.JS.setTimeout (fun () ->
-        konevuoro g
-        // The computer may have handed the turn back to itself (it never does here), but in
-        // any case stop showing the indicator and repaint.
-        g.thinking <- false
-        rerender ()) 30 |> ignore
+    let mutable started = false
+    let run () =
+        if not started then
+            started <- true
+            konevuoro g
+            // Done: swap the spinner for the regular mark and stop the indicator.
+            g.thinking <- false
+            g.pending <- None
+            rerender ()
+    window.requestAnimationFrame (fun _ -> Fable.Core.JS.setTimeout run 0 |> ignore) |> ignore
+    Fable.Core.JS.setTimeout run 150 |> ignore
 
 /// A human click on (col,row) — mirrors MainPage.i_Click. Owns its own re-render so it can
 /// repaint the human move immediately and then compute the reply asynchronously.
@@ -146,7 +157,7 @@ let playerClick (g: Game) (col: int) (row: int) (rerender: unit -> unit) =
                 rerender ()
             else
                 g.toMove <- Player.other g.toMove
-                if computersTurn g then scheduleCpu g rerender   // paints move + spinner, then computes
+                if computersTurn g then scheduleCpu g (col, row) rerender   // paints spinner, then computes
                 else rerender ()
 
 // Single game instance for the page.
@@ -226,17 +237,24 @@ let App () =
                             for row in 0 .. boardSize - 1 do
                                 for col in 0 .. boardSize - 1 do
                                     let isLast = g.last = Some(col, row)
+                                    let isPending = g.pending = Some(col, row)
+                                    let mark =
+                                        match Cell.ofInt c.A.[col].[row] with
+                                        | Taken X -> "x"
+                                        | Taken O -> "o"
+                                        | EmptyCell -> ""
                                     Html.div [
                                         prop.key $"%d{col}_%d{row}"
                                         prop.classes [
                                             "cell"
-                                            match Cell.ofInt c.A.[col].[row] with
-                                            | Taken X -> "x"
-                                            | Taken O -> "o"
-                                            | EmptyCell -> ""
+                                            // While the computer replies, the human's mark is drawn
+                                            // by the spinning child instead of the cell background.
+                                            if isPending then "pending" else mark
                                             if isLast then "last"
                                         ]
                                         prop.onClick (fun _ -> playerClick g col row rerender)
+                                        if isPending then
+                                            prop.children [ Html.span [ prop.className $"cell-spinner %s{mark}" ] ]
                                     ]
                         ]
                     ]
