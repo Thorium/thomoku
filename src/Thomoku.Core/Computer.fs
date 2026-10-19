@@ -1,6 +1,7 @@
 // THO-MOKU — Gomoku/five-in-a-row AI.
-// Faithful F# port of the Silverlight C# `Computer` class (ThomokuSL5), for use with Fable.
-// Verified for exact behavioural equality against the original C# (see /tests).
+// F# port of the Silverlight C# `Computer` class (ThomokuSL5), for use with Fable.
+// Verified for exact behavioural equality against the original C# (see /tests), apart from
+// the fixes marked "Fixed" below, which change play only where the C# misbehaves.
 
 // Suppress FS0049: the port keeps the original C#'s UPPERCASE parameter names
 // (PISTEET, AA, BB, PRIORITY, B, V1/V2, X/Y, C/D) for a faithful 1:1 mapping.
@@ -9,10 +10,18 @@
 namespace Thomoku
 open System
 
-// Early-return helpers (the C# uses `return` mid-loop; each method catches its OWN raise).
-// Used only by the once-per-move methods; the hot recursive search is exception-free.
+// Early-return helper (the C# uses `return` mid-loop; each method catches its OWN raise).
+// The recursive searches (rekursiohaku, rekursiohaku2) still return this way, which is
+// slow on .NET though cheap under Fable; the pattern scorer lisaapriority, called most
+// often, no longer raises.
 exception ReturnInt of int
-exception ReturnUnit
+
+[<AutoOpen>]
+module internal Cells =
+    /// Cells around the board in the padded copy mietipaikka searches: matches no pattern
+    /// value (0 empty, 1/2 stones, 3 and 5 wildcards), so it is neither empty nor a stone.
+    [<Literal>]
+    let OffBoard = 7
 
 /// A board position. NOTE the original semantics: when the engine returns a move, place it
 /// at A.[p.Y].[p.X] (Y indexes the first dimension, X the second) — preserved from the C#.
@@ -1140,42 +1149,40 @@ type Computer() =
 
 
     member this.lisaapriority(PRIORITY: int[][], AA: int[][], C: int, D: int, suunta: int, B: int[][], rivi: int, PISTEET: int[]) =
-        try
-            if ((AA.[rivi].[0] = 3 && B.[C].[D] = 0) || AA.[rivi].[0] = 5 || B.[C].[D] = AA.[rivi].[0]) && ((AA.[rivi].[1] = 3 && B.[C + 1].[D] = 0) || AA.[rivi].[1] = 5 || B.[C + 1].[D] = AA.[rivi].[1]) && ((AA.[rivi].[2] = 3 && B.[C + 2].[D] = 0) || AA.[rivi].[2] = 5 || B.[C + 2].[D] = AA.[rivi].[2]) && ((AA.[rivi].[3] = 3 && B.[C + 3].[D] = 0) || AA.[rivi].[3] = 5 || B.[C + 3].[D] = AA.[rivi].[3]) && ((AA.[rivi].[4] = 3 && B.[C + 4].[D] = 0) || AA.[rivi].[4] = 5 || B.[C + 4].[D] = AA.[rivi].[4]) && ((AA.[rivi].[5] = 3 && B.[C + 5].[D] = 0) || AA.[rivi].[5] = 5 || B.[C + 5].[D] = AA.[rivi].[5]) && ((AA.[rivi].[6] = 3 && B.[C + 6].[D] = 0) || AA.[rivi].[6] = 5 || B.[C + 6].[D] = AA.[rivi].[6]) && ((AA.[rivi].[7] = 3 && B.[C + 7].[D] = 0) || AA.[rivi].[7] = 5 || B.[C + 7].[D] = AA.[rivi].[7]) then
-                for i in 0 .. 7 do
-                    if AA.[rivi].[i] = 0 && B.[C + i].[D] = 0 && C + i > -1 && C + i < this.laudankoko + 8 && D > -1 && D < this.laudankoko + 8 then
-                        PRIORITY.[C + i].[D] <- PRIORITY.[C + i].[D] + PISTEET.[rivi]
-            if ((AA.[rivi].[0] = 3 && B.[C].[D] = 0) || AA.[rivi].[0] = 5 || B.[C].[D] = AA.[rivi].[0]) && ((AA.[rivi].[1] = 3 && B.[C].[D + 1] = 0) || AA.[rivi].[1] = 5 || B.[C].[D + 1] = AA.[rivi].[1]) && ((AA.[rivi].[2] = 3 && B.[C].[D + 2] = 0) || AA.[rivi].[2] = 5 || B.[C].[D + 2] = AA.[rivi].[2]) && ((AA.[rivi].[3] = 3 && B.[C].[D + 3] = 0) || AA.[rivi].[3] = 5 || B.[C].[D + 3] = AA.[rivi].[3]) && ((AA.[rivi].[4] = 3 && B.[C].[D + 4] = 0) || AA.[rivi].[4] = 5 || B.[C].[D + 4] = AA.[rivi].[4]) && ((AA.[rivi].[5] = 3 && B.[C].[D + 5] = 0) || AA.[rivi].[5] = 5 || B.[C].[D + 5] = AA.[rivi].[5]) && ((AA.[rivi].[6] = 3 && B.[C].[D + 6] = 0) || AA.[rivi].[6] = 5 || B.[C].[D + 6] = AA.[rivi].[6]) && ((AA.[rivi].[7] = 3 && B.[C].[D + 7] = 0) || AA.[rivi].[7] = 5 || B.[C].[D + 7] = AA.[rivi].[7]) then
-                for j in 0 .. 7 do
-                    if AA.[rivi].[j] = 0 && B.[C].[D + j] = 0 && C > -1 && C < this.laudankoko + 8 && D + j > -1 && D + j < this.laudankoko + 8 then
-                        PRIORITY.[C].[D + j] <- PRIORITY.[C].[D + j] + PISTEET.[rivi]
-            if ((AA.[rivi].[0] = 3 && B.[C].[D] = 0) || AA.[rivi].[0] = 5 || B.[C].[D] = AA.[rivi].[0]) && ((AA.[rivi].[1] = 3 && B.[C + 1].[D + 1] = 0) || AA.[rivi].[1] = 5 || B.[C + 1].[D + 1] = AA.[rivi].[1]) && ((AA.[rivi].[2] = 3 && B.[C + 2].[D + 2] = 0) || AA.[rivi].[2] = 5 || B.[C + 2].[D + 2] = AA.[rivi].[2]) && ((AA.[rivi].[3] = 3 && B.[C + 3].[D + 3] = 0) || AA.[rivi].[3] = 5 || B.[C + 3].[D + 3] = AA.[rivi].[3]) && ((AA.[rivi].[4] = 3 && B.[C + 4].[D + 4] = 0) || AA.[rivi].[4] = 5 || B.[C + 4].[D + 4] = AA.[rivi].[4]) && ((AA.[rivi].[5] = 3 && B.[C + 5].[D + 5] = 0) || AA.[rivi].[5] = 5 || B.[C + 5].[D + 5] = AA.[rivi].[5]) && ((AA.[rivi].[6] = 3 && B.[C + 6].[D + 6] = 0) || AA.[rivi].[6] = 5 || B.[C + 6].[D + 6] = AA.[rivi].[6]) && ((AA.[rivi].[7] = 3 && B.[C + 7].[D + 7] = 0) || AA.[rivi].[7] = 5 || B.[C + 7].[D + 7] = AA.[rivi].[7]) then
-                for k in 0 .. 7 do
-                    if AA.[rivi].[k] = 0 && B.[C + k].[D + k] = 0 && C + k > -1 && C + k < this.laudankoko + 8 && D + k > -1 && D + k < this.laudankoko + 8 then
-                        PRIORITY.[C + k].[D + k] <- PRIORITY.[C + k].[D + k] + PISTEET.[rivi]
-            if ((AA.[rivi].[0] = 3 && B.[C].[D] = 0) || AA.[rivi].[0] = 5 || B.[C].[D] = AA.[rivi].[0]) && ((AA.[rivi].[1] = 3 && B.[C + 1].[D - 1] = 0) || AA.[rivi].[1] = 5 || B.[C + 1].[D - 1] = AA.[rivi].[1]) && ((AA.[rivi].[2] = 3 && B.[C + 2].[D - 2] = 0) || AA.[rivi].[2] = 5 || B.[C + 2].[D - 2] = AA.[rivi].[2]) && ((AA.[rivi].[3] = 3 && B.[C + 3].[D - 3] = 0) || AA.[rivi].[3] = 5 || B.[C + 3].[D - 3] = AA.[rivi].[3]) && ((AA.[rivi].[4] = 3 && B.[C + 4].[D - 4] = 0) || AA.[rivi].[4] = 5 || B.[C + 4].[D - 4] = AA.[rivi].[4]) && ((AA.[rivi].[5] = 3 && B.[C + 5].[D - 5] = 0) || AA.[rivi].[5] = 5 || B.[C + 5].[D - 5] = AA.[rivi].[5]) && ((AA.[rivi].[6] = 3 && B.[C + 6].[D - 6] = 0) || AA.[rivi].[6] = 5 || B.[C + 6].[D - 6] = AA.[rivi].[6]) && ((AA.[rivi].[7] = 3 && B.[C + 7].[D - 7] = 0) || AA.[rivi].[7] = 5 || B.[C + 7].[D - 7] = AA.[rivi].[7]) then
-                for l in 0 .. 7 do
-                    if AA.[rivi].[l] = 0 && B.[C + l].[D - l] = 0 && C + l > -1 && C + l < this.laudankoko + 8 && D - l > -1 && D - l < this.laudankoko + 8 then
-                        PRIORITY.[C + l].[D - l] <- PRIORITY.[C + l].[D - l] + PISTEET.[rivi]
-            if ((AA.[rivi].[0] = 3 && B.[C].[D] = 0) || AA.[rivi].[0] = 5 || B.[C].[D] = AA.[rivi].[0]) && ((AA.[rivi].[1] = 3 && B.[C - 1].[D] = 0) || AA.[rivi].[1] = 5 || B.[C - 1].[D] = AA.[rivi].[1]) && ((AA.[rivi].[2] = 3 && B.[C - 2].[D] = 0) || AA.[rivi].[2] = 5 || B.[C - 2].[D] = AA.[rivi].[2]) && ((AA.[rivi].[3] = 3 && B.[C - 3].[D] = 0) || AA.[rivi].[3] = 5 || B.[C - 3].[D] = AA.[rivi].[3]) && ((AA.[rivi].[4] = 3 && B.[C - 4].[D] = 0) || AA.[rivi].[4] = 5 || B.[C - 4].[D] = AA.[rivi].[4]) && ((AA.[rivi].[5] = 3 && B.[C - 5].[D] = 0) || AA.[rivi].[5] = 5 || B.[C - 5].[D] = AA.[rivi].[5]) && ((AA.[rivi].[6] = 3 && B.[C - 6].[D] = 0) || AA.[rivi].[6] = 5 || B.[C - 6].[D] = AA.[rivi].[6]) && ((AA.[rivi].[7] = 3 && B.[C - 7].[D] = 0) || AA.[rivi].[7] = 5 || B.[C - 7].[D] = AA.[rivi].[7]) then
-                for m in 0 .. 7 do
-                    if AA.[rivi].[m] = 0 && B.[C - m].[D] = 0 && C - m > -1 && C - m < this.laudankoko + 8 && D > -1 && D < this.laudankoko + 8 then
-                        PRIORITY.[C - m].[D] <- PRIORITY.[C - m].[D] + PISTEET.[rivi]
-            if ((AA.[rivi].[0] = 3 && B.[C].[D] = 0) || AA.[rivi].[0] = 5 || B.[C].[D] = AA.[rivi].[0]) && ((AA.[rivi].[1] = 3 && B.[C].[D - 1] = 0) || AA.[rivi].[1] = 5 || B.[C].[D - 1] = AA.[rivi].[1]) && ((AA.[rivi].[2] = 3 && B.[C].[D - 2] = 0) || AA.[rivi].[2] = 5 || B.[C].[D - 2] = AA.[rivi].[2]) && ((AA.[rivi].[3] = 3 && B.[C].[D - 3] = 0) || AA.[rivi].[3] = 5 || B.[C].[D - 3] = AA.[rivi].[3]) && ((AA.[rivi].[4] = 3 && B.[C].[D - 4] = 0) || AA.[rivi].[4] = 5 || B.[C].[D - 4] = AA.[rivi].[4]) && ((AA.[rivi].[5] = 3 && B.[C].[D - 5] = 0) || AA.[rivi].[5] = 5 || B.[C].[D - 5] = AA.[rivi].[5]) && ((AA.[rivi].[6] = 3 && B.[C].[D - 6] = 0) || AA.[rivi].[6] = 5 || B.[C].[D - 6] = AA.[rivi].[6]) && ((AA.[rivi].[7] = 3 && B.[C].[D - 7] = 0) || AA.[rivi].[7] = 5 || B.[C].[D - 7] = AA.[rivi].[7]) then
-                for n in 0 .. 7 do
-                    if AA.[rivi].[n] = 0 && B.[C].[D - n] = 0 && C > -1 && C < this.laudankoko + 8 && D - n > -1 && D - n < this.laudankoko + 8 then
-                        PRIORITY.[C].[D - n] <- PRIORITY.[C].[D - n] + PISTEET.[rivi]
-            if ((AA.[rivi].[0] = 3 && B.[C].[D] = 0) || AA.[rivi].[0] = 5 || B.[C].[D] = AA.[rivi].[0]) && ((AA.[rivi].[1] = 3 && B.[C - 1].[D - 1] = 0) || AA.[rivi].[1] = 5 || B.[C - 1].[D - 1] = AA.[rivi].[1]) && ((AA.[rivi].[2] = 3 && B.[C - 2].[D - 2] = 0) || AA.[rivi].[2] = 5 || B.[C - 2].[D - 2] = AA.[rivi].[2]) && ((AA.[rivi].[3] = 3 && B.[C - 3].[D - 3] = 0) || AA.[rivi].[3] = 5 || B.[C - 3].[D - 3] = AA.[rivi].[3]) && ((AA.[rivi].[4] = 3 && B.[C - 4].[D - 4] = 0) || AA.[rivi].[4] = 5 || B.[C - 4].[D - 4] = AA.[rivi].[4]) && ((AA.[rivi].[5] = 3 && B.[C - 5].[D - 5] = 0) || AA.[rivi].[5] = 5 || B.[C - 5].[D - 5] = AA.[rivi].[5]) && ((AA.[rivi].[6] = 3 && B.[C - 6].[D - 6] = 0) || AA.[rivi].[6] = 5 || B.[C - 6].[D - 6] = AA.[rivi].[6]) && ((AA.[rivi].[7] = 3 && B.[C - 7].[D - 7] = 0) || AA.[rivi].[7] = 5 || B.[C - 7].[D - 7] = AA.[rivi].[7]) then
-                for num in 0 .. 7 do
-                    if AA.[rivi].[num] = 0 && B.[C - num].[D - num] = 0 && C - num > -1 && C - num < this.laudankoko + 8 && D - num > -1 && D - num < this.laudankoko + 8 then
-                        PRIORITY.[C - num].[D - num] <- PRIORITY.[C - num].[D - num] + PISTEET.[rivi]
-            if ((AA.[rivi].[0] <> 3 || B.[C].[D] <> 0) && AA.[rivi].[0] <> 5 && B.[C].[D] <> AA.[rivi].[0]) || ((AA.[rivi].[1] <> 3 || B.[C - 1].[D + 1] <> 0) && AA.[rivi].[1] <> 5 && B.[C - 1].[D + 1] <> AA.[rivi].[1]) || ((AA.[rivi].[2] <> 3 || B.[C - 2].[D + 2] <> 0) && AA.[rivi].[2] <> 5 && B.[C - 2].[D + 2] <> AA.[rivi].[2]) || ((AA.[rivi].[3] <> 3 || B.[C - 3].[D + 3] <> 0) && AA.[rivi].[3] <> 5 && B.[C - 3].[D + 3] <> AA.[rivi].[3]) || ((AA.[rivi].[4] <> 3 || B.[C - 4].[D + 4] <> 0) && AA.[rivi].[4] <> 5 && B.[C - 4].[D + 4] <> AA.[rivi].[4]) || ((AA.[rivi].[5] <> 3 || B.[C - 5].[D + 5] <> 0) && AA.[rivi].[5] <> 5 && B.[C - 5].[D + 5] <> AA.[rivi].[5]) || ((AA.[rivi].[6] <> 3 || B.[C - 6].[D + 6] <> 0) && AA.[rivi].[6] <> 5 && B.[C - 6].[D + 6] <> AA.[rivi].[6]) || ((AA.[rivi].[7] <> 3 || B.[C - 7].[D + 7] <> 0) && AA.[rivi].[7] <> 5 && B.[C - 7].[D + 7] <> AA.[rivi].[7]) then
-                raise ReturnUnit
+        if ((AA.[rivi].[0] = 3 && B.[C].[D] = 0) || AA.[rivi].[0] = 5 || B.[C].[D] = AA.[rivi].[0]) && ((AA.[rivi].[1] = 3 && B.[C + 1].[D] = 0) || AA.[rivi].[1] = 5 || B.[C + 1].[D] = AA.[rivi].[1]) && ((AA.[rivi].[2] = 3 && B.[C + 2].[D] = 0) || AA.[rivi].[2] = 5 || B.[C + 2].[D] = AA.[rivi].[2]) && ((AA.[rivi].[3] = 3 && B.[C + 3].[D] = 0) || AA.[rivi].[3] = 5 || B.[C + 3].[D] = AA.[rivi].[3]) && ((AA.[rivi].[4] = 3 && B.[C + 4].[D] = 0) || AA.[rivi].[4] = 5 || B.[C + 4].[D] = AA.[rivi].[4]) && ((AA.[rivi].[5] = 3 && B.[C + 5].[D] = 0) || AA.[rivi].[5] = 5 || B.[C + 5].[D] = AA.[rivi].[5]) && ((AA.[rivi].[6] = 3 && B.[C + 6].[D] = 0) || AA.[rivi].[6] = 5 || B.[C + 6].[D] = AA.[rivi].[6]) && ((AA.[rivi].[7] = 3 && B.[C + 7].[D] = 0) || AA.[rivi].[7] = 5 || B.[C + 7].[D] = AA.[rivi].[7]) then
+            for i in 0 .. 7 do
+                if AA.[rivi].[i] = 0 && B.[C + i].[D] = 0 && C + i > -1 && C + i < this.laudankoko + 8 && D > -1 && D < this.laudankoko + 8 then
+                    PRIORITY.[C + i].[D] <- PRIORITY.[C + i].[D] + PISTEET.[rivi]
+        if ((AA.[rivi].[0] = 3 && B.[C].[D] = 0) || AA.[rivi].[0] = 5 || B.[C].[D] = AA.[rivi].[0]) && ((AA.[rivi].[1] = 3 && B.[C].[D + 1] = 0) || AA.[rivi].[1] = 5 || B.[C].[D + 1] = AA.[rivi].[1]) && ((AA.[rivi].[2] = 3 && B.[C].[D + 2] = 0) || AA.[rivi].[2] = 5 || B.[C].[D + 2] = AA.[rivi].[2]) && ((AA.[rivi].[3] = 3 && B.[C].[D + 3] = 0) || AA.[rivi].[3] = 5 || B.[C].[D + 3] = AA.[rivi].[3]) && ((AA.[rivi].[4] = 3 && B.[C].[D + 4] = 0) || AA.[rivi].[4] = 5 || B.[C].[D + 4] = AA.[rivi].[4]) && ((AA.[rivi].[5] = 3 && B.[C].[D + 5] = 0) || AA.[rivi].[5] = 5 || B.[C].[D + 5] = AA.[rivi].[5]) && ((AA.[rivi].[6] = 3 && B.[C].[D + 6] = 0) || AA.[rivi].[6] = 5 || B.[C].[D + 6] = AA.[rivi].[6]) && ((AA.[rivi].[7] = 3 && B.[C].[D + 7] = 0) || AA.[rivi].[7] = 5 || B.[C].[D + 7] = AA.[rivi].[7]) then
+            for j in 0 .. 7 do
+                if AA.[rivi].[j] = 0 && B.[C].[D + j] = 0 && C > -1 && C < this.laudankoko + 8 && D + j > -1 && D + j < this.laudankoko + 8 then
+                    PRIORITY.[C].[D + j] <- PRIORITY.[C].[D + j] + PISTEET.[rivi]
+        if ((AA.[rivi].[0] = 3 && B.[C].[D] = 0) || AA.[rivi].[0] = 5 || B.[C].[D] = AA.[rivi].[0]) && ((AA.[rivi].[1] = 3 && B.[C + 1].[D + 1] = 0) || AA.[rivi].[1] = 5 || B.[C + 1].[D + 1] = AA.[rivi].[1]) && ((AA.[rivi].[2] = 3 && B.[C + 2].[D + 2] = 0) || AA.[rivi].[2] = 5 || B.[C + 2].[D + 2] = AA.[rivi].[2]) && ((AA.[rivi].[3] = 3 && B.[C + 3].[D + 3] = 0) || AA.[rivi].[3] = 5 || B.[C + 3].[D + 3] = AA.[rivi].[3]) && ((AA.[rivi].[4] = 3 && B.[C + 4].[D + 4] = 0) || AA.[rivi].[4] = 5 || B.[C + 4].[D + 4] = AA.[rivi].[4]) && ((AA.[rivi].[5] = 3 && B.[C + 5].[D + 5] = 0) || AA.[rivi].[5] = 5 || B.[C + 5].[D + 5] = AA.[rivi].[5]) && ((AA.[rivi].[6] = 3 && B.[C + 6].[D + 6] = 0) || AA.[rivi].[6] = 5 || B.[C + 6].[D + 6] = AA.[rivi].[6]) && ((AA.[rivi].[7] = 3 && B.[C + 7].[D + 7] = 0) || AA.[rivi].[7] = 5 || B.[C + 7].[D + 7] = AA.[rivi].[7]) then
+            for k in 0 .. 7 do
+                if AA.[rivi].[k] = 0 && B.[C + k].[D + k] = 0 && C + k > -1 && C + k < this.laudankoko + 8 && D + k > -1 && D + k < this.laudankoko + 8 then
+                    PRIORITY.[C + k].[D + k] <- PRIORITY.[C + k].[D + k] + PISTEET.[rivi]
+        if ((AA.[rivi].[0] = 3 && B.[C].[D] = 0) || AA.[rivi].[0] = 5 || B.[C].[D] = AA.[rivi].[0]) && ((AA.[rivi].[1] = 3 && B.[C + 1].[D - 1] = 0) || AA.[rivi].[1] = 5 || B.[C + 1].[D - 1] = AA.[rivi].[1]) && ((AA.[rivi].[2] = 3 && B.[C + 2].[D - 2] = 0) || AA.[rivi].[2] = 5 || B.[C + 2].[D - 2] = AA.[rivi].[2]) && ((AA.[rivi].[3] = 3 && B.[C + 3].[D - 3] = 0) || AA.[rivi].[3] = 5 || B.[C + 3].[D - 3] = AA.[rivi].[3]) && ((AA.[rivi].[4] = 3 && B.[C + 4].[D - 4] = 0) || AA.[rivi].[4] = 5 || B.[C + 4].[D - 4] = AA.[rivi].[4]) && ((AA.[rivi].[5] = 3 && B.[C + 5].[D - 5] = 0) || AA.[rivi].[5] = 5 || B.[C + 5].[D - 5] = AA.[rivi].[5]) && ((AA.[rivi].[6] = 3 && B.[C + 6].[D - 6] = 0) || AA.[rivi].[6] = 5 || B.[C + 6].[D - 6] = AA.[rivi].[6]) && ((AA.[rivi].[7] = 3 && B.[C + 7].[D - 7] = 0) || AA.[rivi].[7] = 5 || B.[C + 7].[D - 7] = AA.[rivi].[7]) then
+            for l in 0 .. 7 do
+                if AA.[rivi].[l] = 0 && B.[C + l].[D - l] = 0 && C + l > -1 && C + l < this.laudankoko + 8 && D - l > -1 && D - l < this.laudankoko + 8 then
+                    PRIORITY.[C + l].[D - l] <- PRIORITY.[C + l].[D - l] + PISTEET.[rivi]
+        if ((AA.[rivi].[0] = 3 && B.[C].[D] = 0) || AA.[rivi].[0] = 5 || B.[C].[D] = AA.[rivi].[0]) && ((AA.[rivi].[1] = 3 && B.[C - 1].[D] = 0) || AA.[rivi].[1] = 5 || B.[C - 1].[D] = AA.[rivi].[1]) && ((AA.[rivi].[2] = 3 && B.[C - 2].[D] = 0) || AA.[rivi].[2] = 5 || B.[C - 2].[D] = AA.[rivi].[2]) && ((AA.[rivi].[3] = 3 && B.[C - 3].[D] = 0) || AA.[rivi].[3] = 5 || B.[C - 3].[D] = AA.[rivi].[3]) && ((AA.[rivi].[4] = 3 && B.[C - 4].[D] = 0) || AA.[rivi].[4] = 5 || B.[C - 4].[D] = AA.[rivi].[4]) && ((AA.[rivi].[5] = 3 && B.[C - 5].[D] = 0) || AA.[rivi].[5] = 5 || B.[C - 5].[D] = AA.[rivi].[5]) && ((AA.[rivi].[6] = 3 && B.[C - 6].[D] = 0) || AA.[rivi].[6] = 5 || B.[C - 6].[D] = AA.[rivi].[6]) && ((AA.[rivi].[7] = 3 && B.[C - 7].[D] = 0) || AA.[rivi].[7] = 5 || B.[C - 7].[D] = AA.[rivi].[7]) then
+            for m in 0 .. 7 do
+                if AA.[rivi].[m] = 0 && B.[C - m].[D] = 0 && C - m > -1 && C - m < this.laudankoko + 8 && D > -1 && D < this.laudankoko + 8 then
+                    PRIORITY.[C - m].[D] <- PRIORITY.[C - m].[D] + PISTEET.[rivi]
+        if ((AA.[rivi].[0] = 3 && B.[C].[D] = 0) || AA.[rivi].[0] = 5 || B.[C].[D] = AA.[rivi].[0]) && ((AA.[rivi].[1] = 3 && B.[C].[D - 1] = 0) || AA.[rivi].[1] = 5 || B.[C].[D - 1] = AA.[rivi].[1]) && ((AA.[rivi].[2] = 3 && B.[C].[D - 2] = 0) || AA.[rivi].[2] = 5 || B.[C].[D - 2] = AA.[rivi].[2]) && ((AA.[rivi].[3] = 3 && B.[C].[D - 3] = 0) || AA.[rivi].[3] = 5 || B.[C].[D - 3] = AA.[rivi].[3]) && ((AA.[rivi].[4] = 3 && B.[C].[D - 4] = 0) || AA.[rivi].[4] = 5 || B.[C].[D - 4] = AA.[rivi].[4]) && ((AA.[rivi].[5] = 3 && B.[C].[D - 5] = 0) || AA.[rivi].[5] = 5 || B.[C].[D - 5] = AA.[rivi].[5]) && ((AA.[rivi].[6] = 3 && B.[C].[D - 6] = 0) || AA.[rivi].[6] = 5 || B.[C].[D - 6] = AA.[rivi].[6]) && ((AA.[rivi].[7] = 3 && B.[C].[D - 7] = 0) || AA.[rivi].[7] = 5 || B.[C].[D - 7] = AA.[rivi].[7]) then
+            for n in 0 .. 7 do
+                if AA.[rivi].[n] = 0 && B.[C].[D - n] = 0 && C > -1 && C < this.laudankoko + 8 && D - n > -1 && D - n < this.laudankoko + 8 then
+                    PRIORITY.[C].[D - n] <- PRIORITY.[C].[D - n] + PISTEET.[rivi]
+        if ((AA.[rivi].[0] = 3 && B.[C].[D] = 0) || AA.[rivi].[0] = 5 || B.[C].[D] = AA.[rivi].[0]) && ((AA.[rivi].[1] = 3 && B.[C - 1].[D - 1] = 0) || AA.[rivi].[1] = 5 || B.[C - 1].[D - 1] = AA.[rivi].[1]) && ((AA.[rivi].[2] = 3 && B.[C - 2].[D - 2] = 0) || AA.[rivi].[2] = 5 || B.[C - 2].[D - 2] = AA.[rivi].[2]) && ((AA.[rivi].[3] = 3 && B.[C - 3].[D - 3] = 0) || AA.[rivi].[3] = 5 || B.[C - 3].[D - 3] = AA.[rivi].[3]) && ((AA.[rivi].[4] = 3 && B.[C - 4].[D - 4] = 0) || AA.[rivi].[4] = 5 || B.[C - 4].[D - 4] = AA.[rivi].[4]) && ((AA.[rivi].[5] = 3 && B.[C - 5].[D - 5] = 0) || AA.[rivi].[5] = 5 || B.[C - 5].[D - 5] = AA.[rivi].[5]) && ((AA.[rivi].[6] = 3 && B.[C - 6].[D - 6] = 0) || AA.[rivi].[6] = 5 || B.[C - 6].[D - 6] = AA.[rivi].[6]) && ((AA.[rivi].[7] = 3 && B.[C - 7].[D - 7] = 0) || AA.[rivi].[7] = 5 || B.[C - 7].[D - 7] = AA.[rivi].[7]) then
+            for num in 0 .. 7 do
+                if AA.[rivi].[num] = 0 && B.[C - num].[D - num] = 0 && C - num > -1 && C - num < this.laudankoko + 8 && D - num > -1 && D - num < this.laudankoko + 8 then
+                    PRIORITY.[C - num].[D - num] <- PRIORITY.[C - num].[D - num] + PISTEET.[rivi]
+        if ((AA.[rivi].[0] <> 3 || B.[C].[D] <> 0) && AA.[rivi].[0] <> 5 && B.[C].[D] <> AA.[rivi].[0]) || ((AA.[rivi].[1] <> 3 || B.[C - 1].[D + 1] <> 0) && AA.[rivi].[1] <> 5 && B.[C - 1].[D + 1] <> AA.[rivi].[1]) || ((AA.[rivi].[2] <> 3 || B.[C - 2].[D + 2] <> 0) && AA.[rivi].[2] <> 5 && B.[C - 2].[D + 2] <> AA.[rivi].[2]) || ((AA.[rivi].[3] <> 3 || B.[C - 3].[D + 3] <> 0) && AA.[rivi].[3] <> 5 && B.[C - 3].[D + 3] <> AA.[rivi].[3]) || ((AA.[rivi].[4] <> 3 || B.[C - 4].[D + 4] <> 0) && AA.[rivi].[4] <> 5 && B.[C - 4].[D + 4] <> AA.[rivi].[4]) || ((AA.[rivi].[5] <> 3 || B.[C - 5].[D + 5] <> 0) && AA.[rivi].[5] <> 5 && B.[C - 5].[D + 5] <> AA.[rivi].[5]) || ((AA.[rivi].[6] <> 3 || B.[C - 6].[D + 6] <> 0) && AA.[rivi].[6] <> 5 && B.[C - 6].[D + 6] <> AA.[rivi].[6]) || ((AA.[rivi].[7] <> 3 || B.[C - 7].[D + 7] <> 0) && AA.[rivi].[7] <> 5 && B.[C - 7].[D + 7] <> AA.[rivi].[7]) then
+            ()
+        else
             for num2 in 0 .. 7 do
                 if AA.[rivi].[num2] = 0 && B.[C - num2].[D + num2] = 0 && C - num2 > -1 && C - num2 < this.laudankoko + 8 && D + num2 > -1 && D + num2 < this.laudankoko + 8 then
                     PRIORITY.[C - num2].[D + num2] <- PRIORITY.[C - num2].[D + num2] + PISTEET.[rivi]
-            ()
-        with ReturnUnit -> ()
 
 
     member this.rekursiohaku(syvyys: int, syvyysmax: int, AA: int[][], BB: int[][], B: int[][], PRIORITY: int[][], rivi0: int, suunta0: int, X: int, Y: int, puoli2: int) : int =
@@ -1836,10 +1843,13 @@ type Computer() =
                                             this.PRIORITY.[num20 - 2].[num19] <- 400
                                             raise (ReturnInt 1)
                                     if array.[num20 + 1].[num19 + 3] = 2 then
+                                        // Fixed typo (also in the C#): set and checked [num19], not the
+                                        // [num19 + 2] corner the other branches use, so the book could put
+                                        // 500 on an occupied cell and the move fell to random noise.
                                         if array.[num20 - 2].[num19 + 2] = 0 then
-                                            this.PRIORITY.[num20 - 2].[num19] <- 500
+                                            this.PRIORITY.[num20 - 2].[num19 + 2] <- 500
                                             raise (ReturnInt 1)
-                                        if array.[num20 - 2].[num19 + 2] <> 0 && array.[num20 + 2].[num19] = 0 then
+                                        if array.[num20 - 2].[num19 + 2] <> 0 && array.[num20 + 2].[num19 + 2] = 0 then
                                             this.PRIORITY.[num20 + 2].[num19 + 2] <- 400
                                             raise (ReturnInt 1)
                                     if array.[num20 - 1].[num19 + 3] = 2 then
@@ -2273,7 +2283,9 @@ type Computer() =
                                     this.PRIORITY.[n + 2].[m - 2] <- 500
                                     raise (ReturnInt 1)
                                 if array.[n].[m - 2] = 1 && array.[n + 2].[m - 2] = 1 && array.[n + 2].[m] = 0 then
-                                    this.PRIORITY.[n + 2].[m - 2] <- 500
+                                    // Fixed typo (also in the C#): set [n + 2].[m - 2], a cell it had just
+                                    // seen occupied, instead of the empty corner it checked
+                                    this.PRIORITY.[n + 2].[m] <- 500
                                     raise (ReturnInt 1)
                                 if array.[n + 2].[m] = 0 && array.[n + 2].[m + 2] = 1 && array.[n].[m + 2] = 1 then
                                     this.PRIORITY.[n + 2].[m] <- 500
@@ -2348,9 +2360,15 @@ type Computer() =
             if Computer.random.NextDouble() > 0.98 then num3 <- 4
             let mutable syvyysmax = this.maxsyvyys
             let num6 = this.arpa4()
+            // Set when the opponent has an open three (pikahaku below)
+            let mutable opponentOpenThree = false
+            // Fixed: the cells around the board were 0, empty, so a line running into the edge
+            // looked open: a three against the edge counted as a winning four ("I won!!!") and
+            // an edge |XXX__ as an open three. They are now OffBoard, which no pattern reads as
+            // empty; the searches only ever place stones on cells they matched as empty.
             for i in 0 .. 63 do
                 for j in 0 .. 63 do
-                    array.[j].[i] <- 0
+                    array.[j].[i] <- OffBoard
             for k in 0 .. this.laudankoko - 1 do
                 for l in 0 .. this.laudankoko - 1 do
                     array.[l + 8].[k + 8] <- this.A.[l].[k]
@@ -2363,7 +2381,10 @@ type Computer() =
                         this.lisaapriority(this.PRIORITY, aA, num7, n, suunta, array, m, pISTEET)
             for num8 in 8 .. this.laudankoko + 8 - 1 do
                 for num9 in 8 .. this.laudankoko + 8 - 1 do
-                    if this.PRIORITY.[num9].[num8] > 1 then
+                    // Only an empty cell can be played. A priority left on an occupied cell (an
+                    // opening-book slip) would end the search here, and haeparas, which skips
+                    // occupied cells, would then pick on random noise alone.
+                    if this.PRIORITY.[num9].[num8] > 1 && array.[num9].[num8] = 0 then
                         if this.PRIORITY.[num9].[num8] < 1000 && this.puhe = 1 then
                             if num6 <= 1 then this.CmpComString <- "Computer: I have no options..."
                             if num6 = 2 then this.CmpComString <- "Computer: Now you had the straight four. :("
@@ -2401,6 +2422,7 @@ type Computer() =
                                 if num6 >= 4 then this.CmpComString <- "Computer: You must be sleeping."
                             raise (ReturnInt 1)
                 let num18 = this.pikahaku(array, num2, 2)
+                opponentOpenThree <- (num18 = 9)
                 if num18 = 9 then
                     this.torjuntahaku(array, num2, this.PRIORITY) |> ignore
                     for num19 in 8 .. this.laudankoko + 8 - 1 do
@@ -2486,6 +2508,13 @@ type Computer() =
             if num3 = 2 then this.defender pISTEET
             if num3 = 3 then this.preasure pISTEET
             if num3 = 4 then this.tbuilder pISTEET
+            // Fixed: with the opponent on an open three, not blocking it loses to an open four,
+            // yet a cell where several of its own lines cross could outscore the block (a
+            // broken three's block is 2000 in preasure and tbuilder; a triple fork scored 3120).
+            // Rows 8-10 block an open three; lift them above any sum of lesser shapes.
+            if opponentOpenThree then
+                for row in 8 .. 10 do
+                    pISTEET.[row] <- max pISTEET.[row] 6000
             if num2 = 1 then this.taulukko4(aA, 2, 1)
             if num2 = 2 then this.taulukko4(aA, 1, 2)
             for num41 in 0 .. 39 do
